@@ -62,7 +62,7 @@ function generateTestCases()
 		{
 			var paramName = functionConstraints[funcName].params[i];
 			//params[paramName] = '\'' + faker.phone.phoneNumber()+'\'';
-			params[paramName] = '\'\'';
+			params[paramName] = '\'\''; // generates ''
 		}
 
 		//console.log( params );
@@ -79,10 +79,12 @@ function generateTestCases()
 			if( params.hasOwnProperty( constraint.ident ) )
 			{
 				params[constraint.ident] = constraint.value;
+				// if value is numeric, then make a test case for that number, one above, and one below
 			}
 		}
 
 		// Prepare function arguments.
+		// join parameters into string
 		var args = Object.keys(params).map( function(k) {return params[k]; }).join(",");
 		if( pathExists || fileWithContent )
 		{
@@ -149,18 +151,37 @@ function constraints(filePath)
 			// Check for expressions using argument.
 			traverse(node, function(child)
 			{
-				if( child.type === 'BinaryExpression' && child.operator == "==")
+				if( child.type === 'BinaryExpression')
 				{
-					if( child.left.type == 'Identifier' && params.indexOf( child.left.name ) > -1)
+					if (child.operator == "==")
 					{
-						// get expression from original source code:
-						//var expression = buf.substring(child.range[0], child.range[1]);
-						var rightHand = buf.substring(child.right.range[0], child.right.range[1])
-						functionConstraints[funcName].constraints.push( 
-							{
-								ident: child.left.name,
-								value: rightHand
-							});
+						if( child.left.type == 'Identifier' && isParameter(params, child.left.name))
+						{
+							// get expression from original source code:
+							//var expression = buf.substring(child.range[0], child.range[1]);
+							var rightHand = buf.substring(child.right.range[0], child.right.range[1])
+							functionConstraints[funcName].constraints.push( 
+								{
+									ident: child.left.name,
+									value: rightHand
+								});
+						}
+					}
+
+					if (child.operator == '<')
+					{
+						if( child.left.type == 'Identifier' && isParameter(params, child.left.name))
+						{
+							// get expression from original source code:
+							//var expression = buf.substring(child.range[0], child.range[1]);
+							var rightHand = buf.substring(child.right.range[0], child.right.range[1])
+							var decreaseValueToWithinRange = rightHand - 1;
+							functionConstraints[funcName].constraints.push( 
+								{
+									ident: child.left.name,
+									value: decreaseValueToWithinRange
+								});
+						}
 					}
 				}
 
@@ -249,6 +270,14 @@ function functionName( node )
 		return node.id.name;
 	}
 	return "";
+}
+
+function isParameter(params, toCheck) {
+	return params.indexOf( toCheck ) > -1
+}
+
+function isNumeric(num){
+    return !isNaN(num)
 }
 
 
