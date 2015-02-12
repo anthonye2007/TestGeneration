@@ -172,15 +172,28 @@ function constraints(filePath)
 					{
 						if( child.left.type == 'Identifier' && isParameter(params, child.left.name))
 						{
-							// get expression from original source code:
-							//var expression = buf.substring(child.range[0], child.range[1]);
 							var rightHand = buf.substring(child.right.range[0], child.right.range[1])
-							var decreaseValueToWithinRange = rightHand - 1;
-							functionConstraints[funcName].constraints.push( 
-								{
-									ident: child.left.name,
-									value: decreaseValueToWithinRange
-								});
+
+							if (isNumeric(rightHand))
+							{
+								rightHand = strToNum(rightHand);
+
+								// make expression true
+								var decreaseValueToWithinRange = rightHand - 1;
+								functionConstraints[funcName].constraints.push( 
+									{
+										ident: child.left.name,
+										value: decreaseValueToWithinRange
+									});
+
+								// make expression false
+								var increasedValue = rightHand + 1;
+								functionConstraints[funcName].constraints.push( 
+									{
+										ident: child.left.name,
+										value: increasedValue
+									});
+							}
 						}
 					}
 				}
@@ -278,6 +291,10 @@ function isParameter(params, toCheck) {
 
 function isNumeric(num){
     return !isNaN(num)
+}
+
+function strToNum(str) {
+	return +str;
 }
 
 
