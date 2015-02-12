@@ -79,13 +79,12 @@ function generateTestCases()
 			if( params.hasOwnProperty( constraint.ident ) )
 			{
 				params[constraint.ident] = constraint.value;
-				// if value is numeric, then make a test case for that number, one above, and one below
 			}
 		}
 
 		// Prepare function arguments.
 		// join parameters into string
-		var args = Object.keys(params).map( function(k) {return params[k]; }).join(",");
+		var args = joinArgs(params);
 		if( pathExists || fileWithContent )
 		{
 			content += generateMockFsTestCases(pathExists,fileWithContent,funcName, args);
@@ -96,8 +95,7 @@ function generateTestCases()
 		}
 		else
 		{
-			// Emit simple test case.
-			content += "subject.{0}({1});\n".format(funcName, args );
+			content += generateNumericTestCases(funcName, params);
 		}
 
 	}
@@ -105,6 +103,43 @@ function generateTestCases()
 
 	fs.writeFileSync('test.js', content, "utf8");
 
+}
+
+function generateNumericTestCases(funcName, params) {
+	function writeTest(paramsToWrite) {
+		var args = joinArgs(paramsToWrite);
+		testCase += "subject.{0}({1});\n".format(funcName, args);
+	}
+
+	var testCase = "";
+
+	if (!params) {
+		writeTest(params);
+		return testCase;
+	}
+
+	for (identifier in params) {
+		if (isNumeric(params[identifier])) {
+			console.log("Numeric: -- " + identifier + " is: " + params[identifier]);
+			// test for increased value
+			var increasedValue = deepClone(params);
+			increasedValue[identifier] = strToNum(increasedValue[identifier]);
+			increasedValue[identifier] += 1;
+			writeTest(increasedValue);
+
+			// test for decreased value
+			var decreasedValue = deepClone(params);
+			decreasedValue[identifier] = strToNum(decreasedValue[identifier]);
+			decreasedValue[identifier] -= 1;
+			writeTest(decreasedValue);
+		} else {
+			console.log("Not numeric: -- " + identifier + " is: " + params[identifier]);
+		}
+	}	
+
+	// test for same value
+	writeTest(params);
+	return testCase;
 }
 
 function generateMockFsTestCases (pathExists,fileWithContent,funcName,args) 
@@ -173,8 +208,13 @@ function constraints(filePath)
 						if( child.left.type == 'Identifier' && isParameter(params, child.left.name))
 						{
 							var rightHand = buf.substring(child.right.range[0], child.right.range[1])
+							functionConstraints[funcName].constraints.push( 
+								{
+									ident: child.left.name,
+									value: rightHand
+								});
 
-							if (isNumeric(rightHand))
+							/*if (isNumeric(rightHand))
 							{
 								rightHand = strToNum(rightHand);
 
@@ -193,7 +233,7 @@ function constraints(filePath)
 										ident: child.left.name,
 										value: increasedValue
 									});
-							}
+							}*/
 						}
 					}
 				}
@@ -295,6 +335,15 @@ function isNumeric(num){
 
 function strToNum(str) {
 	return +str;
+}
+
+function joinArgs(params) {
+	return Object.keys(params).map( function(k) {return params[k]; }).join(",");
+}
+
+function deepClone(obj) {
+	// from http://stackoverflow.com/a/5344074/1212045
+	return JSON.parse(JSON.stringify(obj));
 }
 
 
