@@ -134,6 +134,13 @@ function generateNumericTestCases(funcName, params) {
 			writeTest(decreasedValue);
 		} else {
 			console.log("Not numeric: -- " + identifier + " is: " + params[identifier]);
+
+            if (params[identifier] === 'undefined') {
+                console.log('undefined -- ' + identifier + " is: " + params[identifier]);
+                var clone = deepClone(params);
+                clone[identifier] = 'true';
+                writeTest(clone);
+            }
 		}
 	}	
 
